@@ -2,6 +2,7 @@
 
 import argparse
 import pathlib
+import re
 import shlex
 import subprocess
 import sys
@@ -31,8 +32,8 @@ def main():
     # Define the parser for the Slurm job script directives.  It only cares about
     # * --cluster
     # * --partition
+    # * --export
     script_parser = argparse.ArgumentParser(
-        description='Submit a job in a clean environment.',
         add_help=False
     )
     script_parser.add_argument(
@@ -42,6 +43,10 @@ def main():
     script_parser.add_argument(
         '--partition',
         help='Partition to submit the job to.'
+    )
+    script_parser.add_argument(
+        '--export',
+        help='Environment variabels to export to the job.'
     )
 
     # Define the parser for the command line arguments.  It cares about
@@ -107,6 +112,13 @@ def main():
     if not args.partition:
         args.partition = DEFAULT_PARTITION
 
+    # If --export was given, check whether it already contains ALL, if not, add
+    if args.export:
+        if not re.match(r'\bALL\b', args.export):
+            args.export  = 'ALL,' + args.export
+    else:
+        args.export = 'ALL'
+
     # Command to ensure the environment is clean
     clean_command = 'module purge &> /dev/null'
     if not args.quiet:
@@ -123,7 +135,7 @@ def main():
         env_command = '(>&2 echo "Preparing environment...") && ' + env_command
 
     # Ensure environment variables are passed into the job
-    sbatch_args.insert(0, '--export=ALL')
+    sbatch_args.insert(0, f'--export={args.export}')
 
     # Ensure that the --cluster and --partition arguments will be passed
     # to sbatch if they were intercepted
