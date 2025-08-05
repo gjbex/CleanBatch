@@ -5,6 +5,7 @@ import pathlib
 import shlex
 import subprocess
 import sys
+import threading
 
 # Defaults
 DEFAULT_PARTITION = 'batch'
@@ -19,23 +20,10 @@ def extract_sbatch_tokens(script_path):
                 tokens.extend(shlex.split(line[len("#SBATCH"):].strip()))
     return tokens
 
-
-# # Step 2: Parse #SBATCH tokens to get defaults
-# job_script_path = Path("job_script.sh")
-# sbatch_tokens = extract_sbatch_tokens(job_script_path)
-# slurm_defaults, _ = slurm_parser.parse_known_args(sbatch_tokens)
-# 
-# # Step 3: Main parser with slurm_parser as parent
-# main_parser = argparse.ArgumentParser(parents=[slurm_parser])
-# main_parser.add_argument("--foo")  # Example of script-specific option
-# main_parser.set_defaults(**vars(slurm_defaults))
-# 
-# # Step 4: Parse CLI args (CLI overrides script defaults)
-# args = main_parser.parse_args()
-# 
-# print("Cluster:", args.cluster)
-# print("Partition:", args.partition)
-# print("Foo:", args.foo)
+def stream(input_stream, output_stream):
+    for line in input_stream:
+        print(line.rstrip(), file=output_stream)
+    input_stream.close()
 
 def main():
     # Define the parser for the Slurm job script directives.  It only cares about
@@ -120,17 +108,17 @@ def main():
     # Command to ensure the environment is clean
     clean_command = 'module purge &> /dev/null'
     if not args.quiet:
-        clean_command = '(>&2 echo "cleaning environment...") && ' + clean_command
+        clean_command = '(>&2 echo "Cleaning environment...") && ' + clean_command
 
     # Command to initialize the environment
     if args.conda:
         env_command = f'source ~/.bashrc && conda activate {args.conda}'
     elif args.modules:
-        env_command = f'module load cluster/{args.cluster}/{args.partition} && module load $(cat {args.modules})'
+        env_command = f'module --quiet load cluster/{args.cluster}/{args.partition} && module load $(cat {args.modules})'
     else:
         env_command = 'true'
     if not args.quiet:
-        env_command = '(>&2 echo "preparing environment...") && ' + env_command
+        env_command = '(>&2 echo "Preparing environment...") && ' + env_command
 
     # Ensure environment variables are passed into the job
     sbatch_args.insert(0, '--export=ALL')
@@ -156,11 +144,25 @@ def main():
 
     # execute the command
     try:
-        result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
-        print(result.stdout.strip())
-    except subprocess.CalledProcessError as e:
-        print(f'Error executing command: {e.stderr.strip()}', file=sys.stderr)
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=True,
+            bufsize=1,
+        )
+        threading.Thread(target=stream, args=(process.stdout, sys.stdout), daemon=True).start()
+        threading.Thread(target=stream, args=(process.stderr, sys.stderr), daemon=True).start()
+        exit_status = process.wait()
+        sys.exit(exit_status)
+    except FileNotFoundError as e:
+        print(f'Error: {e}', file=sys.stderr)
         sys.exit(e.returncode)
+    except subprocess.CalledProcessError as e:
+        sys.exit(e.returncode)
+    except KeyboardInterrupt:
+        pass
 
     
 if __name__ == '__main__':
