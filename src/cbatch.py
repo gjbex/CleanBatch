@@ -9,6 +9,8 @@ import threading
 
 # Defaults
 DEFAULT_PARTITION = 'batch'
+SUBMISSION_CMD = 'sbatch'
+PYTHON_ENV_MNGR = 'conda'
 
 def extract_sbatch_tokens(script_path):
     '''Extract all tokens from #SBATCH lines in a Slurm job script.'''
@@ -112,7 +114,7 @@ def main():
 
     # Command to initialize the environment
     if args.conda:
-        env_command = f'source ~/.bashrc && conda activate {args.conda}'
+        env_command = f'source ~/.bashrc && {PYTHON_ENV_MNGR} activate {args.conda}'
     elif args.modules:
         env_command = f'module --quiet load cluster/{args.cluster}/{args.partition} && module load $(cat {args.modules})'
     else:
@@ -136,7 +138,7 @@ def main():
     sbatch_args = [shlex.quote(arg) for arg in sbatch_args]
 
     # Construct the sequence of commands to be executed
-    command = f'{clean_command} && {env_command} && sbatch {" ".join(sbatch_args)}'
+    command = f'{clean_command} && {env_command} && {SUBMISSION_CMD} {" ".join(sbatch_args)}'
 
     if args.dry_run:
         print(f'Dry run:\n{command}')
