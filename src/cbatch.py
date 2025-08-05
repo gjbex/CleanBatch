@@ -137,6 +137,10 @@ def main():
     # Ensure environment variables are passed into the job
     sbatch_args.insert(0, f'--export={args.export}')
 
+    # Since --quiet is also an sbatch option, insert it into the the arugment list
+    if args.quiet:
+        sbatch_args.insert(0, '--quiet')
+
     # Ensure that the --cluster and --partition arguments will be passed
     # to sbatch if they were intercepted
     sbatch_args.insert(0, f'--cluster={args.cluster}')
