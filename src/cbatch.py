@@ -16,11 +16,15 @@ PYTHON_ENV_MNGR = 'conda'
 def extract_sbatch_tokens(script_path):
     '''Extract all tokens from #SBATCH lines in a Slurm job script.'''
     tokens = []
-    with open(script_path) as script_file:
-        for line in script_file:
-            line = line.strip()
-            if line.startswith("#SBATCH"):
-                tokens.extend(shlex.split(line[len("#SBATCH"):].strip()))
+    try:
+        with open(script_path) as script_file:
+            for line in script_file:
+                line = line.strip()
+                if line.startswith("#SBATCH"):
+                    tokens.extend(shlex.split(line[len("#SBATCH"):].strip()))
+    except OSError as e:
+        print(f"Error reading job script '{script_path}': {e}", file=sys.stderr)
+        raise
     return tokens
 
 def stream(input_stream, output_stream):
