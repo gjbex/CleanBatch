@@ -46,7 +46,7 @@ def main():
     )
     script_parser.add_argument(
         '--export',
-        help='Environment variabels to export to the job.'
+        help='Environment variables to export to the job.'
     )
 
     # Define the parser for the command line arguments.  It cares about
