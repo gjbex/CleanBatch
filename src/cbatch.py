@@ -120,7 +120,7 @@ def main():
         args.export = 'ALL'
 
     # Command to ensure the environment is clean
-    clean_command = 'module purge &> /dev/null'
+    clean_command = 'module purge > /dev/null 2>&1'
     if not args.quiet:
         clean_command = '(>&2 echo "Cleaning environment...") && ' + clean_command
 
@@ -169,6 +169,7 @@ def main():
             text=True,
             shell=True,
             bufsize=1,
+            executable='/bin/bash'
         )
         threading.Thread(target=stream, args=(process.stdout, sys.stdout), daemon=True).start()
         threading.Thread(target=stream, args=(process.stderr, sys.stderr), daemon=True).start()
