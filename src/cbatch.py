@@ -103,6 +103,11 @@ def main():
     # that were set as directives in the job script
     args, sbatch_args = parser.parse_known_args(namespace=script_args)
 
+    # If a modules file was specified, ensure that it exists
+    if args.modules and not pathlib.Path(args.modules).is_file():
+        print(f"Error: modules file '{args.modules}' not found", file=sys.stderr)
+        sys.exit(1)
+
     # If no --cluster was given, exit
     if not args.cluster:
         print('Error: no cluster specified', file=sys.stderr)
