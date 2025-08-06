@@ -135,9 +135,17 @@ def main():
 
     # Command to initialize the environment
     if args.conda:
-        env_command = f'source ~/.bashrc && {PYTHON_ENV_MNGR} activate {args.conda}'
+        conda_env = shlex.quote(args.conda)
+        env_mngr = shlex.quote(PYTHON_ENV_MNGR)
+        env_command = f'source ~/.bashrc && {env_mngr} activate {conda_env}'
     elif args.modules:
-        env_command = f'module --quiet load cluster/{args.cluster}/{args.partition} && module load $(cat {args.modules})'
+        cluster = shlex.quote(args.cluster)
+        partition = shlex.quote(args.partition)
+        modules_file = shlex.quote(args.modules)
+        env_command = (
+            f'module --quiet load cluster/{cluster}/{partition} && '
+            f'module load $(cat {modules_file})'
+        )
     else:
         env_command = 'true'
     if not args.quiet:
@@ -159,11 +167,11 @@ def main():
     sbatch_args.append(args.jobscript)
     sbatch_args.extend(args.jobscript_args)
 
-    # Ensure that the arguments for sbatch are properly quoted
-    sbatch_args = [shlex.quote(arg) for arg in sbatch_args]
+    # Construct the sbatch command ensuring proper quoting
+    sbatch_command = shlex.join([SUBMISSION_CMD, *sbatch_args])
 
     # Construct the sequence of commands to be executed
-    command = f'{clean_command} && {env_command} && {SUBMISSION_CMD} {" ".join(sbatch_args)}'
+    command = f'{clean_command} && {env_command} && {sbatch_command}'
 
     if args.dry_run:
         print(f'Dry run:\n{command}')
