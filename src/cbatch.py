@@ -114,8 +114,8 @@ def main():
 
     # If --export was given, check whether it already contains ALL, if not, add
     if args.export:
-        if not re.match(r'\bALL\b', args.export):
-            args.export  = 'ALL,' + args.export
+        if not re.search(r'\bALL\b', args.export):
+            args.export = 'ALL,' + args.export
     else:
         args.export = 'ALL'
 
