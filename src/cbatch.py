@@ -170,9 +170,17 @@ def main():
             shell=True,
             bufsize=1,
         )
-        threading.Thread(target=stream, args=(process.stdout, sys.stdout), daemon=True).start()
-        threading.Thread(target=stream, args=(process.stderr, sys.stderr), daemon=True).start()
+        stdout_thread = threading.Thread(
+            target=stream, args=(process.stdout, sys.stdout)
+        )
+        stderr_thread = threading.Thread(
+            target=stream, args=(process.stderr, sys.stderr)
+        )
+        stdout_thread.start()
+        stderr_thread.start()
         exit_status = process.wait()
+        stdout_thread.join()
+        stderr_thread.join()
         sys.exit(exit_status)
     except FileNotFoundError as e:
         print(f'Error: {e}', file=sys.stderr)
