@@ -189,7 +189,7 @@ def main():
         sys.exit(exit_status)
     except FileNotFoundError as e:
         print(f'Error: {e}', file=sys.stderr)
-        sys.exit(e.returncode)
+        sys.exit(e.errno or 1)
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)
     except KeyboardInterrupt:
